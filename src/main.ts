@@ -7,18 +7,21 @@ import { BaseVisualizer } from './visualizers/BaseVisualizer';
 import { RadialVisualizer } from './visualizers/RadialVisualizer';
 import { WaveVisualizer } from './visualizers/WaveVisualizer';
 
-interface ResolveTrackResponse {
-  trackId: string;
+interface TrackData {
+  id: string;
   title: string;
   artist: string;
   coverArt: string | null;
-  artistAvatar: string | null;
+  streamUrl: string | null;
+  duration?: number;
   playable: boolean;
+  source: 'soundcloud' | 'youtube' | 'local';
 }
 
 interface StreamResponse {
   streamUrl: string | null;
   playable: boolean;
+  source?: TrackData['source'];
 }
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -83,7 +86,7 @@ async function handleGenerate(state: ControlState): Promise<void> {
 
   try {
     controls.setStatus('Resolving track metadata...');
-    const track = await postJson<ResolveTrackResponse>('/api/resolve-track', { url: state.url });
+    const track = await postJson<TrackData>('/api/resolve-track', { url: state.url });
     renderMetadata(track);
 
     if (!track.playable) {
@@ -92,7 +95,9 @@ async function handleGenerate(state: ControlState): Promise<void> {
     }
 
     controls.setStatus('Resolving stream...');
-    const stream = await postJson<StreamResponse>('/api/stream', { trackId: track.trackId });
+    const stream = track.streamUrl
+      ? { streamUrl: track.streamUrl, playable: track.playable, source: track.source }
+      : await postJson<StreamResponse>('/api/stream', { trackId: track.id, source: track.source });
     if (stream.streamUrl) {
       audioManager.loadTrack(stream.streamUrl);
       await audioManager.play();
@@ -120,8 +125,8 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return payload as T;
 }
 
-function renderMetadata(track: ResolveTrackResponse): void {
-  const image = track.coverArt ?? track.artistAvatar;
+function renderMetadata(track: TrackData): void {
+  const image = track.coverArt;
   if (image) backgroundArt.style.backgroundImage = `url("${image}")`;
   metadataCard.hidden = false;
   metadataCard.innerHTML = `

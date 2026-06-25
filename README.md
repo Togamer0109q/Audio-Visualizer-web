@@ -1,13 +1,13 @@
 # SoundCloud Visualizer
 
-A browser-based SoundCloud visualizer inspired by phonk and edit visualizers. The frontend is a Vite + TypeScript + Three.js app, and the backend is designed for Vercel Serverless Functions.
+A browser-based audio visualizer inspired by phonk and edit visualizers. The frontend is a Vite + TypeScript + Three.js app, and the backend is designed for Vercel Serverless Functions with a Universal Audio Provider System (UAPS).
 
 ## Features
 
 - Fullscreen dark cyber-themed interface with glassmorphism panels.
-- SoundCloud URL input with backend-only SoundCloud API access.
-- Track metadata resolution endpoint.
-- Stream resolution endpoint scaffolded for real credentials.
+- Universal provider resolver for SoundCloud, YouTube, and local audio inputs.
+- Backend-only provider access so third-party APIs are never called directly by the frontend.
+- Track metadata and stream resolution scaffolding normalized into one `TrackData` shape.
 - Modular Three.js renderer and animation loop.
 - Wave and radial visualizer modes with procedural animation.
 - AudioManager prepared for Web Audio API analyser data and mock fallback.
@@ -18,11 +18,36 @@ A browser-based SoundCloud visualizer inspired by phonk and edit visualizers. Th
 ```text
 Frontend (Vite / TypeScript / Three.js)
   -> Vercel API routes
-    -> SoundCloud API (https://api.soundcloud.com)
-    -> SoundCloud token host (https://secure.soundcloud.com)
+    -> ProviderResolver
+      -> SoundCloudProvider -> SoundCloud API (https://api.soundcloud.com)
+      -> YouTubeProvider -> TODO approved metadata/stream strategy
+      -> LocalProvider -> TODO browser File integration
 ```
 
-The frontend never calls SoundCloud directly. API routes validate input, rate-limit callers, authenticate with SoundCloud, cache token/track data, and return only the data needed by the visualizer.
+The frontend never calls third-party providers directly. API routes validate input, rate-limit callers, select the correct provider, cache token/track data where relevant, and return a normalized `TrackData` object to the visualizer.
+
+## Universal Audio Provider System
+
+All providers normalize results into:
+
+```ts
+interface TrackData {
+  id: string;
+  title: string;
+  artist: string;
+  coverArt: string | null;
+  streamUrl: string | null;
+  duration?: number;
+  playable: boolean;
+  source: "soundcloud" | "youtube" | "local";
+}
+```
+
+Current provider status:
+
+- `SoundCloudProvider`: resolves metadata through the existing SoundCloud service and attempts stream URL scaffolding when credentials allow it.
+- `YouTubeProvider`: detects YouTube URLs and returns a non-playable placeholder until an approved API/extraction strategy is selected.
+- `LocalProvider`: detects `local:`, `blob:`, and `data:audio/` inputs; full browser File integration is intentionally left as a frontend TODO.
 
 ## SoundCloud API notes
 
@@ -88,22 +113,23 @@ Returns:
 
 ### `POST /api/resolve-track`
 
-Request:
+Request accepts any provider-supported input:
 
 ```json
 { "url": "https://soundcloud.com/artist/track" }
 ```
 
-Response:
+Response uses normalized `TrackData`:
 
 ```json
 {
-  "trackId": "123",
+  "id": "123",
   "title": "Track title",
   "artist": "Artist",
   "coverArt": null,
-  "artistAvatar": null,
-  "playable": true
+  "streamUrl": null,
+  "playable": true,
+  "source": "soundcloud"
 }
 ```
 
@@ -112,7 +138,7 @@ Response:
 Request:
 
 ```json
-{ "trackId": "123" }
+{ "trackId": "123", "source": "soundcloud" }
 ```
 
 Response:

@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { getClientIp, checkRateLimit } from '../lib/rateLimit';
 import { TrackService } from '../lib/soundcloud/tracks';
 
-const schema = z.object({ trackId: z.string().regex(/^\d+$/, 'trackId must be numeric') });
+const schema = z.object({
+  trackId: z.string().regex(/^\d+$/, 'trackId must be numeric'),
+  source: z.enum(['soundcloud', 'youtube', 'local']).optional().default('soundcloud'),
+});
 
 export default async function handler(request: VercelRequest, response: VercelResponse): Promise<void> {
   if (request.method !== 'POST') {
@@ -19,9 +22,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
     response.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid request body' });
     return;
   }
+  if (parsed.data.source !== 'soundcloud') {
+    response.status(200).json({ streamUrl: null, playable: false, source: parsed.data.source });
+    return;
+  }
   try {
     const stream = await new TrackService().getPlayableStream(parsed.data.trackId);
-    response.status(200).json(stream);
+    response.status(200).json({ ...stream, source: 'soundcloud' });
   } catch (error) {
     response.status(502).json({ error: error instanceof Error ? error.message : 'Unable to resolve stream' });
   }

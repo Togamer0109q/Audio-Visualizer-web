@@ -1,9 +1,11 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel';
 import { z } from 'zod';
 import { getClientIp, checkRateLimit } from '../lib/rateLimit';
-import { TrackService } from '../lib/soundcloud/tracks';
+import { ProviderResolver } from '../lib/providers/ProviderResolver';
 
-const schema = z.object({ url: z.string().url().max(2048).refine((value) => new URL(value).hostname.endsWith('soundcloud.com'), 'URL must be from soundcloud.com') });
+const schema = z.object({
+  url: z.string().trim().min(1).max(4096),
+});
 
 export default async function handler(request: VercelRequest, response: VercelResponse): Promise<void> {
   if (request.method !== 'POST') {
@@ -20,7 +22,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return;
   }
   try {
-    const track = await new TrackService().getTrackFromUrl(parsed.data.url);
+    const track = await new ProviderResolver().resolve(parsed.data.url);
     response.status(200).json(track);
   } catch (error) {
     response.status(502).json({ error: error instanceof Error ? error.message : 'Unable to resolve track' });

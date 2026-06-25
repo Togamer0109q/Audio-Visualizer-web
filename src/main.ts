@@ -2,6 +2,7 @@ import './styles.css';
 import { AudioManager } from './audio/AudioManager';
 import { AnimationLoop } from './core/AnimationLoop';
 import { Renderer } from './core/Renderer';
+import { LocalProvider } from '../lib/providers/LocalProvider';
 import { Controls, type ControlState, type VisualizerMode } from './ui/Controls';
 import { BaseVisualizer } from './visualizers/BaseVisualizer';
 import { RadialVisualizer } from './visualizers/RadialVisualizer';
@@ -48,6 +49,7 @@ const metadataCard = metadataCardElement;
 
 const renderer = new Renderer(stage);
 const audioManager = new AudioManager();
+const localProvider = new LocalProvider();
 const loop = new AnimationLoop();
 let activeVisualizer: BaseVisualizer = createVisualizer('wave');
 activeVisualizer.initialize(renderer.scene);
@@ -80,14 +82,16 @@ function applySettings(state: ControlState): void {
 
 async function handleGenerate(state: ControlState): Promise<void> {
   applySettings(state);
-  if (!state.url) {
-    controls.setStatus('Enter an audio URL first.');
+  if (!state.url && !state.audioFile) {
+    controls.setStatus('Enter an audio URL or choose an MP3/WAV file first.');
     return;
   }
 
   try {
     controls.setStatus('Resolving audio source...');
-    const track = await postJson<TrackData>('/api/resolve-track', { url: state.url });
+    const track = state.audioFile
+      ? await localProvider.resolve({ audioFile: state.audioFile, coverFile: state.coverFile })
+      : await postJson<TrackData>('/api/resolve-track', { url: state.url });
     renderMetadata(track);
 
     if (!track.playable) {

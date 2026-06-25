@@ -6,6 +6,8 @@ export interface ControlState {
   blurStrength: number;
   bassSensitivity: number;
   mode: VisualizerMode;
+  audioFile: File | null;
+  coverFile: File | null;
 }
 
 interface ControlHandlers {
@@ -36,6 +38,8 @@ export class Controls {
       blurStrength: Number(this.input('[data-blur]').value),
       bassSensitivity: Number(this.input('[data-bass]').value) / 100,
       mode: this.input('[data-mode]').value as VisualizerMode,
+      audioFile: this.fileInput('[data-audio-file]').files?.[0] ?? null,
+      coverFile: this.fileInput('[data-cover-file]').files?.[0] ?? null,
     };
   }
 
@@ -51,6 +55,12 @@ export class Controls {
     });
   }
 
+  private fileInput(selector: string): HTMLInputElement {
+    const element = this.root.querySelector<HTMLInputElement>(selector);
+    if (!element) throw new Error(`Missing control: ${selector}`);
+    return element;
+  }
+
   private input(selector: string): HTMLInputElement | HTMLSelectElement {
     const element = this.root.querySelector<HTMLInputElement | HTMLSelectElement>(selector);
     if (!element) throw new Error(`Missing control: ${selector}`);
@@ -63,10 +73,14 @@ export class Controls {
         <p class="eyebrow">Phonk edit engine</p>
         <h1>SoundCloud Visualizer</h1>
         <div class="url-row">
-          <input data-url type="url" placeholder="Paste SoundCloud URL..." autocomplete="off" />
+          <input data-url type="url" placeholder="Paste SoundCloud or YouTube URL..." autocomplete="off" />
           <button data-generate type="button">Generate</button>
         </div>
-        <p data-status class="status">Paste an audio URL to ignite the visualizer.</p>
+        <p data-status class="status">Paste a URL or upload an MP3/WAV to ignite the visualizer.</p>
+        <div class="file-row">
+          <label class="file-pill">Audio <input data-audio-file type="file" accept="audio/mpeg,audio/mp3,audio/wav,.mp3,.wav" /></label>
+          <label class="file-pill">Cover <input data-cover-file type="file" accept="image/*" /></label>
+        </div>
       </header>
       <button data-toggle-settings class="gear-button" type="button" aria-label="Open visualizer settings">⚙</button>
       <section data-settings class="settings-dock" aria-label="Visualizer settings">

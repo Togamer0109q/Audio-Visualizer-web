@@ -10,8 +10,8 @@ export class ProviderResolver {
     this.providers = providers;
   }
 
-  public getProvider(input: string): BaseProvider {
-    const normalizedInput = input.trim();
+  public getProvider(input: unknown): BaseProvider {
+    const normalizedInput = normalizeInput(input);
     const provider = this.providers.find((candidate) => safelyCanHandle(candidate, normalizedInput));
     if (!provider) {
       console.warn('[ProviderResolver] unsupported input', { inputType: describeInput(normalizedInput) });
@@ -21,13 +21,13 @@ export class ProviderResolver {
     return provider;
   }
 
-  public async resolve(input: string): Promise<TrackData> {
-    const normalizedInput = input.trim();
+  public async resolve(input: unknown): Promise<TrackData> {
+    const normalizedInput = normalizeInput(input);
     return this.getProvider(normalizedInput).resolve(normalizedInput);
   }
 }
 
-function safelyCanHandle(provider: BaseProvider, input: string): boolean {
+function safelyCanHandle(provider: BaseProvider, input: unknown): boolean {
   try {
     return provider.canHandle(input);
   } catch (error) {
@@ -39,7 +39,10 @@ function safelyCanHandle(provider: BaseProvider, input: string): boolean {
   }
 }
 
-function describeInput(input: string): string {
+function describeInput(input: unknown): string {
+  if (typeof File !== 'undefined' && input instanceof File) return `file:${input.type || 'unknown'}`;
+  if (input && typeof input === 'object' && 'audioFile' in input) return 'local-file-input';
+  if (typeof input !== 'string') return typeof input;
   try {
     const url = new URL(input);
     return `${url.protocol}//${url.hostname}`;
@@ -50,3 +53,7 @@ function describeInput(input: string): string {
 
 export type { TrackData } from './BaseProvider';
 export { ProviderError } from './BaseProvider';
+
+function normalizeInput(input: unknown): unknown {
+  return typeof input === 'string' ? input.trim() : input;
+}

@@ -25,7 +25,7 @@ export class ProviderError extends Error {
 export abstract class BaseProvider {
   public abstract readonly source: AudioSource;
 
-  public abstract canHandle(input: string): boolean;
+  public abstract canHandle(input: unknown): boolean;
 
-  public abstract resolve(input: string): Promise<TrackData>;
+  public abstract resolve(input: unknown): Promise<TrackData>;
 }

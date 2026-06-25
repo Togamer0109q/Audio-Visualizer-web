@@ -45,9 +45,9 @@ interface TrackData {
 
 Current provider status:
 
-- `SoundCloudProvider`: resolves metadata through the existing SoundCloud service and attempts stream URL scaffolding when credentials allow it.
-- `YouTubeProvider`: detects YouTube URLs and returns a non-playable placeholder until an approved API/extraction strategy is selected.
-- `LocalProvider`: detects `local:`, `blob:`, and `data:audio/` inputs; full browser File integration is intentionally left as a frontend TODO.
+- `LocalProvider`: fully supports browser MP3/WAV `File` uploads, creates object URLs for playback, derives titles from filenames, and supports optional uploaded cover art.
+- `YouTubeProvider`: resolves title, channel, thumbnail, and duration when `YOUTUBE_API_KEY` is configured; without stream extraction it intentionally returns `playable: false`.
+- `SoundCloudProvider`: remains stable and scaffolded behind credentials while stream-selection details are verified against production SoundCloud app access.
 
 ## SoundCloud API notes
 
@@ -80,6 +80,7 @@ The integration follows SoundCloud's official API guide and OpenAPI reference:
    SOUNDCLOUD_CLIENT_ID=
    SOUNDCLOUD_CLIENT_SECRET=
    SOUNDCLOUD_REDIRECT_URI=
+   YOUTUBE_API_KEY=
    ```
 
 4. Run locally:
@@ -97,7 +98,7 @@ The integration follows SoundCloud's official API guide and OpenAPI reference:
 
 ## Vercel deployment
 
-- Add `SOUNDCLOUD_CLIENT_ID`, `SOUNDCLOUD_CLIENT_SECRET`, and `SOUNDCLOUD_REDIRECT_URI` in the Vercel project settings.
+- Add `SOUNDCLOUD_CLIENT_ID`, `SOUNDCLOUD_CLIENT_SECRET`, `SOUNDCLOUD_REDIRECT_URI`, and optional `YOUTUBE_API_KEY` in the Vercel project settings.
 - Deploy with Vercel using the included `vercel.json`.
 - The frontend build output is `dist`, and serverless functions live in `api/`.
 
@@ -113,7 +114,7 @@ API routes return structured JSON errors instead of raw server errors:
 }
 ```
 
-If SoundCloud credentials are missing, SoundCloud-backed routes return HTTP `503` with `SoundCloud provider unavailable` instead of crashing. Unsupported provider inputs return HTTP `400`, and scaffold-only providers return non-playable normalized responses.
+If SoundCloud credentials are missing, SoundCloud-backed routes return HTTP `503` with `SoundCloud provider unavailable` instead of crashing. Unsupported provider inputs return HTTP `400`, YouTube metadata failures return structured provider errors, and providers without stream extraction return non-playable normalized responses.
 
 ## API routes
 
@@ -127,7 +128,7 @@ Returns:
 
 ### `POST /api/resolve-track`
 
-Request accepts any provider-supported input:
+Request accepts any URL-based provider input. Local MP3/WAV playback is handled directly in the browser with `LocalProvider` because serverless functions cannot receive browser `File` objects without a dedicated upload pipeline:
 
 ```json
 { "url": "https://soundcloud.com/artist/track" }

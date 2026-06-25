@@ -8,7 +8,8 @@ export class SoundCloudProvider extends BaseProvider {
     super();
   }
 
-  public canHandle(input: string): boolean {
+  public canHandle(input: unknown): boolean {
+    if (typeof input !== 'string') return false;
     try {
       const url = new URL(input);
       return url.hostname === 'soundcloud.com' || url.hostname.endsWith('.soundcloud.com');
@@ -17,13 +18,14 @@ export class SoundCloudProvider extends BaseProvider {
     }
   }
 
-  public async resolve(input: string): Promise<TrackData> {
+  public async resolve(input: unknown): Promise<TrackData> {
     if (!hasSoundCloudCredentials()) {
       console.warn('[SoundCloudProvider] missing SoundCloud credentials');
       throw new ProviderError('SoundCloud provider unavailable', 503);
     }
 
     console.info('[SoundCloudProvider] resolving track metadata');
+    if (typeof input !== 'string') throw new ProviderError('Invalid SoundCloud input', 400);
     const metadata = await this.trackService.getTrackFromUrl(input);
     let streamUrl: string | null = null;
     let playable = metadata.playable;

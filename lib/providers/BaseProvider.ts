@@ -11,6 +11,17 @@ export interface TrackData {
   source: AudioSource;
 }
 
+export class ProviderError extends Error {
+  public constructor(
+    message: string,
+    public readonly statusCode = 500,
+    public readonly details?: string,
+  ) {
+    super(message);
+    this.name = 'ProviderError';
+  }
+}
+
 export abstract class BaseProvider {
   public abstract readonly source: AudioSource;
 

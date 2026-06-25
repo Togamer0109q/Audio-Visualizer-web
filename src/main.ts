@@ -31,6 +31,7 @@ app.innerHTML = `
   <main class="app-shell">
     <div class="background-art" data-background-art></div>
     <div class="grid-overlay"></div>
+    <div class="particle-field" aria-hidden="true">${Array.from({ length: 24 }, (_, index) => `<span style="--i:${index}"></span>`).join('')}</div>
     <section class="visualizer-stage" data-stage></section>
     <section class="metadata-card" data-metadata hidden></section>
     <div data-controls></div>
@@ -80,21 +81,21 @@ function applySettings(state: ControlState): void {
 async function handleGenerate(state: ControlState): Promise<void> {
   applySettings(state);
   if (!state.url) {
-    controls.setStatus('Enter a SoundCloud track URL first.');
+    controls.setStatus('Enter an audio URL first.');
     return;
   }
 
   try {
-    controls.setStatus('Resolving track metadata...');
+    controls.setStatus('Resolving audio source...');
     const track = await postJson<TrackData>('/api/resolve-track', { url: state.url });
     renderMetadata(track);
 
     if (!track.playable) {
-      controls.setStatus('Track resolved, but SoundCloud reports it is not fully playable off-platform.');
+      controls.setStatus(`${track.source} source resolved, but playback is not available yet.`);
       return;
     }
 
-    controls.setStatus('Resolving stream...');
+    controls.setStatus('Preparing playback stream...');
     const stream = track.streamUrl
       ? { streamUrl: track.streamUrl, playable: track.playable, source: track.source }
       : await postJson<StreamResponse>('/api/stream', { trackId: track.id, source: track.source });
@@ -119,7 +120,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   });
   const payload = (await response.json()) as unknown;
   if (!response.ok) {
-    const message = typeof payload === 'object' && payload && 'error' in payload ? String(payload.error) : 'Request failed';
+    const message = typeof payload === 'object' && payload && 'message' in payload ? String(payload.message) : 'Request failed';
     throw new Error(message);
   }
   return payload as T;
@@ -130,7 +131,7 @@ function renderMetadata(track: TrackData): void {
   if (image) backgroundArt.style.backgroundImage = `url("${image}")`;
   metadataCard.hidden = false;
   metadataCard.innerHTML = `
-    <span>${track.playable ? 'Playable' : 'Restricted'}</span>
+    <span>${track.source} · ${track.playable ? 'Playable' : 'Preview mode'}</span>
     <strong>${escapeHtml(track.title)}</strong>
     <p>${escapeHtml(track.artist)}</p>
   `;

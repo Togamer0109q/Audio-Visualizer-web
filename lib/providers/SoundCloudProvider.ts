@@ -1,4 +1,4 @@
-import { BaseProvider, type TrackData } from './BaseProvider';
+import { BaseProvider, ProviderError, type TrackData } from './BaseProvider';
 import { TrackService } from '../soundcloud/tracks';
 
 export class SoundCloudProvider extends BaseProvider {
@@ -18,6 +18,12 @@ export class SoundCloudProvider extends BaseProvider {
   }
 
   public async resolve(input: string): Promise<TrackData> {
+    if (!hasSoundCloudCredentials()) {
+      console.warn('[SoundCloudProvider] missing SoundCloud credentials');
+      throw new ProviderError('SoundCloud provider unavailable', 503);
+    }
+
+    console.info('[SoundCloudProvider] resolving track metadata');
     const metadata = await this.trackService.getTrackFromUrl(input);
     let streamUrl: string | null = null;
     let playable = metadata.playable;
@@ -27,8 +33,12 @@ export class SoundCloudProvider extends BaseProvider {
         const stream = await this.trackService.getPlayableStream(metadata.trackId);
         streamUrl = stream.streamUrl;
         playable = stream.playable;
-      } catch {
+      } catch (error) {
         // TODO: Surface structured provider diagnostics once production SoundCloud credentials are available.
+        console.warn('[SoundCloudProvider] stream resolution unavailable', {
+          trackId: metadata.trackId,
+          error: error instanceof Error ? error.message : String(error),
+        });
         streamUrl = null;
       }
     }
@@ -43,4 +53,8 @@ export class SoundCloudProvider extends BaseProvider {
       source: this.source,
     };
   }
+}
+
+function hasSoundCloudCredentials(): boolean {
+  return Boolean(process.env.SOUNDCLOUD_CLIENT_ID && process.env.SOUNDCLOUD_CLIENT_SECRET);
 }

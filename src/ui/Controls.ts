@@ -44,7 +44,7 @@ export class Controls {
       this.handlers.onGenerate(this.getState());
     });
     this.root.querySelector<HTMLButtonElement>('[data-toggle-settings]')?.addEventListener('click', () => {
-      this.root.querySelector('[data-settings]')?.classList.toggle('is-collapsed');
+      this.root.querySelector('[data-settings]')?.classList.toggle('is-open');
     });
     this.root.querySelectorAll('input, select').forEach((element) => {
       element.addEventListener('input', () => this.handlers.onSettingsChange(this.getState()));
@@ -59,28 +59,29 @@ export class Controls {
 
   private template(): string {
     return `
-      <header class="hero-panel">
-        <p class="eyebrow">Phonk / edit inspired</p>
+      <header class="top-composer">
+        <p class="eyebrow">Phonk edit engine</p>
         <h1>SoundCloud Visualizer</h1>
         <div class="url-row">
           <input data-url type="url" placeholder="Paste SoundCloud URL..." autocomplete="off" />
           <button data-generate type="button">Generate</button>
         </div>
-        <p data-status class="status">Paste a SoundCloud track URL to resolve metadata.</p>
+        <p data-status class="status">Paste an audio URL to ignite the visualizer.</p>
       </header>
-      <aside data-settings class="settings-panel">
-        <button data-toggle-settings class="settings-toggle" type="button">Settings</button>
-        <div class="settings-content">
-          <label>Glow Intensity <input data-glow type="range" min="0" max="100" value="70" /></label>
-          <label>Blur Strength <input data-blur type="range" min="0" max="100" value="55" /></label>
-          <label>Bass Sensitivity <input data-bass type="range" min="0" max="100" value="65" /></label>
-          <label>Visualizer Mode
+      <button data-toggle-settings class="gear-button" type="button" aria-label="Open visualizer settings">⚙</button>
+      <section data-settings class="settings-dock" aria-label="Visualizer settings">
+        <div class="dock-handle"></div>
+        <div class="settings-grid">
+          <label>Glow <input data-glow type="range" min="0" max="100" value="82" /></label>
+          <label>Blur <input data-blur type="range" min="0" max="100" value="78" /></label>
+          <label>Bass <input data-bass type="range" min="0" max="100" value="72" /></label>
+          <label>Mode
             <select data-mode>
-              <option value="wave">Wave</option>
-              <option value="radial">Radial</option>
+              <option value="wave">Liquid Wave</option>
+              <option value="radial">Radial Bars</option>
             </select>
           </label>
         </div>
-      </aside>`;
+      </section>`;
   }
 }

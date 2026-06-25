@@ -101,6 +101,20 @@ The integration follows SoundCloud's official API guide and OpenAPI reference:
 - Deploy with Vercel using the included `vercel.json`.
 - The frontend build output is `dist`, and serverless functions live in `api/`.
 
+## API error format
+
+API routes return structured JSON errors instead of raw server errors:
+
+```json
+{
+  "error": true,
+  "message": "Human readable error",
+  "details": "Optional technical details"
+}
+```
+
+If SoundCloud credentials are missing, SoundCloud-backed routes return HTTP `503` with `SoundCloud provider unavailable` instead of crashing. Unsupported provider inputs return HTTP `400`, and scaffold-only providers return non-playable normalized responses.
+
 ## API routes
 
 ### `GET /api/health`
